@@ -12,7 +12,7 @@ describe("createRequestBody", () => {
     const body = createRequestBody("openai/gpt-6-luna", "Я летаю", 512);
 
     assert.equal(body.max_completion_tokens, 512);
-    assert.equal(body.reasoning_effort, "none");
+    assert.equal(body.reasoning_effort, "low");
     assert.equal("max_tokens" in body, false);
   });
 
