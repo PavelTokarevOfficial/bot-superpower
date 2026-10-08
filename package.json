@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "bun --watch src/index.ts",
-    "build": "bun build src/index.ts --outdir dist --target bun --minify --sourcemap=linked",
+    "build": "bun build src/index.ts --outdir dist --target bun --packages=bundle --minify --sourcemap=linked",
     "start": "bun dist/index.js",
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",

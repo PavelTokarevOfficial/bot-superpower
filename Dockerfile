@@ -1,14 +1,14 @@
-FROM oven/bun:1-alpine AS build
+FROM oven/bun:1.4.2-alpine AS build
 
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN bun install
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
 
 COPY tsconfig.json tsconfig.build.json biome.json ./
 COPY src ./src
 RUN bun run build
 
-FROM oven/bun:1-alpine AS runtime
+FROM oven/bun:1.4.2-alpine AS runtime
 
 WORKDIR /app
 ENV NODE_ENV=production

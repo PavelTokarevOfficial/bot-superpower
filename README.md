@@ -132,3 +132,54 @@ bun run build
 `/diag` показывает модель, доступность PostgreSQL, статистику, ID чата и пользователя,
 Privacy Mode, Bun version, uptime и баланс ProxyAPI. Для баланса у ProxyAPI-ключа должно
 быть включено разрешение «Запрос баланса». Секреты команда не выводит.
+
+## Production-деплой через GHCR
+
+Локальный `compose.yaml` по-прежнему собирает образ через `build: .`.
+`compose.production.yaml` предназначен только для VPS и использует неизменяемый GHCR-тег,
+переданный через `BOT_IMAGE`. Compose project name зафиксирован как `bot-superpower`, а
+volume PostgreSQL — как `bot-superpower_postgres_data`.
+
+Workflow `.github/workflows/deploy.yml` при push в `main` только собирает образ и публикует
+его как `ghcr.io/<owner>/<repo>:<commit-sha>`. Автоматического деплоя нет. Deploy-job
+запускается только через `workflow_dispatch`, требует включённый `confirm_deploy` и GitHub
+Environment `production`.
+
+Перед первым ручным деплоем на VPS:
+
+1. Установите Docker с Compose plugin и убедитесь, что SSH-пользователь может выполнять
+   `docker` без интерактивного `sudo`.
+2. Создайте `/opt/telegram-bot/.env` со всеми переменными из `.env.example` и обязательно
+   задайте непустой `POSTGRES_PASSWORD`. Символы пароля, специальные для URL, должны быть
+   percent-encoded при использовании внутри `DATABASE_URL`.
+3. Проверьте существующий volume read-only командой:
+
+   ```bash
+   docker volume inspect bot-superpower_postgres_data
+   ```
+
+   Workflow намеренно остановится, если этого volume нет. На абсолютно новом VPS его можно
+   один раз создать безопасной командой `docker volume create bot-superpower_postgres_data`.
+   Для переноса существующей базы новый пустой volume создавать нельзя — сначала перенесите
+   или подключите исходный `bot-superpower_postgres_data`.
+4. Один раз скачайте образ БД: `docker pull postgres:17-alpine`. Workflow скачивает только
+   образ бота и запускает Compose с `--pull never`.
+5. Создайте GitHub Environment с точным именем `production`; для дополнительной защиты
+   настройте Required reviewers.
+
+Для `SSH_KNOWN_HOSTS` получите host key из доверенного источника — например, из консоли VPS
+или панели провайдера. Если используете локальный `ssh-keyscan -H <SSH_HOST>`, обязательно
+сверьте fingerprint с данными провайдера через `ssh-keygen -lf`. Только после проверки
+скопируйте полную строку host key в repository secret `SSH_KNOWN_HOSTS`. Workflow не вызывает
+`ssh-keyscan` и использует `StrictHostKeyChecking=yes`.
+
+Первый деплой:
+
+1. Отправьте изменения в `main` и дождитесь успешного job `Build and push immutable image`.
+2. Откройте GitHub → Actions → `Build and deploy` → `Run workflow`.
+3. Выберите `main`, включите `confirm_deploy` и запустите workflow.
+4. После approval в Environment job загрузит production Compose в `/opt/telegram-bot`,
+   проверит `.env` и volume, скачает только SHA-образ бота, выполнит
+   `docker compose up -d --no-build --pull never` и покажет `docker compose ps`.
+
+Workflow не содержит `docker compose down`, операций `-v` или команд удаления volume.
