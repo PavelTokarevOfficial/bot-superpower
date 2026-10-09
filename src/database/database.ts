@@ -77,10 +77,18 @@ export class Database {
         chat_id BIGINT NOT NULL,
         chat_type TEXT NOT NULL,
         telegram_user_id BIGINT NOT NULL,
+        telegram_username TEXT,
         text TEXT NOT NULL,
+        bot_response TEXT,
+        responded_at TIMESTAMPTZ,
         received_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         UNIQUE (chat_id, telegram_message_id)
       );
+
+      ALTER TABLE inbound_messages
+        ADD COLUMN IF NOT EXISTS telegram_username TEXT,
+        ADD COLUMN IF NOT EXISTS bot_response TEXT,
+        ADD COLUMN IF NOT EXISTS responded_at TIMESTAMPTZ;
 
       CREATE INDEX IF NOT EXISTS inbound_messages_user_idx
         ON inbound_messages (telegram_user_id, received_at DESC);
@@ -238,11 +246,25 @@ export class Database {
     await this.ensureUser(input.user);
     await this.sql`
       INSERT INTO inbound_messages (
-        telegram_message_id, chat_id, chat_type, telegram_user_id, text
+        telegram_message_id, chat_id, chat_type, telegram_user_id, telegram_username, text
       ) VALUES (
-        ${input.messageId}, ${input.chatId}, ${input.chatType}, ${input.user.id}, ${input.text}
+        ${input.messageId}, ${input.chatId}, ${input.chatType}, ${input.user.id},
+        ${input.user.username ?? null}, ${input.text}
       )
-      ON CONFLICT (chat_id, telegram_message_id) DO NOTHING
+      ON CONFLICT (chat_id, telegram_message_id) DO UPDATE SET
+        telegram_username = EXCLUDED.telegram_username
+    `;
+  }
+
+  async saveBotResponse(input: {
+    messageId: number;
+    chatId: number;
+    response: string;
+  }): Promise<void> {
+    await this.sql`
+      UPDATE inbound_messages
+      SET bot_response = ${input.response}, responded_at = NOW()
+      WHERE chat_id = ${input.chatId} AND telegram_message_id = ${input.messageId}
     `;
   }
 

@@ -421,6 +421,20 @@ export function createBot(config: AppConfig, db: Database): Bot {
     }, 4_000);
     try {
       const debuff = await proxyApi.generateDebuff(userText);
+      await db
+        .saveBotResponse({
+          messageId: ctx.message.message_id,
+          chatId: ctx.chat.id,
+          response: debuff,
+        })
+        .catch((saveError) => {
+          logEvent("error", "bot_response_save_failed", {
+            userId: ctx.from.id,
+            chatId: ctx.chat.id,
+            messageId: ctx.message.message_id,
+            ...errorSummary(saveError),
+          });
+        });
       await ctx.reply(debuff, replyOptions);
     } catch (error) {
       await db.releaseReservation(quota.reservation).catch((releaseError) => {
