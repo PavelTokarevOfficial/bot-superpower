@@ -4,13 +4,6 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
-    inputs:
-      confirm_deploy:
-        description: Deploy the image for the selected main commit to production
-        required: true
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -55,7 +48,7 @@ jobs:
 
   deploy:
     name: Deploy selected commit to VPS
-    if: github.event_name == 'workflow_dispatch' && inputs.confirm_deploy == true
+    needs: build
     runs-on: ubuntu-latest
     environment: production
     permissions:
