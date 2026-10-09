@@ -15,6 +15,7 @@ ENV NODE_ENV=production
 
 RUN addgroup --system --gid 1001 bot && adduser --system --uid 1001 --ingroup bot bot
 COPY --from=build --chown=bot:bot /app/dist ./dist
+COPY --chown=bot:bot assets ./assets
 
 USER bot
 CMD ["bun", "dist/index.js"]

@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { Bot, type Context, GrammyError, HttpError, InlineKeyboard } from "grammy";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { Bot, type Context, GrammyError, HttpError, InlineKeyboard, InputFile } from "grammy";
 import type { config as appConfig } from "../config/index.js";
 import type { Database, TelegramUser } from "../database/database.js";
 import { errorSummary, logEvent } from "../logging/logger.js";
@@ -11,6 +13,7 @@ const EMPTY_TEXT = "Сначала придумай суперспособнос
 const TOO_LONG_TEXT = "Слишком длинно. Опиши суперспособность короче.";
 const ERROR_TEXT = "Не смог придумать дебафф. Попробуй ещё раз чуть позже.";
 const ADMIN_ONLY_TEXT = "Эта команда доступна только администратору.";
+const START_IMAGE_PATH = resolve(process.cwd(), "assets", "start.jpg");
 
 export function createBot(config: AppConfig, db: Database): Bot {
   const bot = new Bot(config.telegramBotToken);
@@ -44,7 +47,7 @@ export function createBot(config: AppConfig, db: Database): Bot {
 
   bot.command("start", async (ctx) => {
     if (!ctx.from || ctx.from.is_bot) return;
-    await ctx.reply(`Напиши мне суперспособность — я придумаю, как ее улучшить.
+    const text = `Напиши мне суперспособность — я придумаю, как ее улучшить.
 
 Бесплатно: ${config.dailyFreeRequests} запросов в сутки.
 /balance — остаток запросов
@@ -52,7 +55,19 @@ export function createBot(config: AppConfig, db: Database): Bot {
 
 Например:
 Ты: Я умею летать
-Я: Но только вниз.`);
+Я: Но только вниз.`;
+    if (existsSync(START_IMAGE_PATH)) {
+      try {
+        await ctx.replyWithPhoto(new InputFile(START_IMAGE_PATH), { caption: text });
+        return;
+      } catch (error) {
+        logEvent("warn", "start_image_failed", {
+          userId: ctx.from.id,
+          ...errorSummary(error),
+        });
+      }
+    }
+    await ctx.reply(text);
   });
 
   bot.command("balance", async (ctx) => {
