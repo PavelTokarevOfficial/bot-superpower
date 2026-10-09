@@ -38,7 +38,6 @@ DATABASE_URL=postgres://bot:change_me@localhost:5432/bot_superpower
 ADMIN_IDS=832766702
 DAILY_FREE_REQUESTS=5
 STARS_PACKAGES=5:10,15:28,50:85
-PAYMENT_SUPPORT_CONTACT=@your_username
 POSTGRES_PASSWORD=change_me
 ```
 
@@ -46,6 +45,10 @@ POSTGRES_PASSWORD=change_me
 Картинку для команды `/start` положите в `assets/start.png`. Она копируется в Docker-образ,
 отправляется как локальный файл, а приветственный текст размещается в подписи. Если файла
 нет или Telegram не сможет его отправить, бот автоматически отправит обычный текст.
+Картинка `assets/pay.png` аналогично используется в меню `/buy`: тарифы выводятся в подписи,
+а кнопки выбора пакета прикрепляются к изображению.
+`assets/balance.png` используется командой `/balance`, а `assets/paysupport.png` — командой
+`/paysupport`. Контакт поддержки зафиксирован как `@sa1nt_paul`.
 Перед production-запуском замените `POSTGRES_PASSWORD` и такой же пароль пропишите в
 локальном `DATABASE_URL`, если запускаете Bun вне Compose. `.env` исключён из Git.
 
@@ -114,7 +117,7 @@ bun run build
 
 Для цифровых товаров счёт создаётся в валюте `XTR` без provider token. Бот подтверждает
 `pre_checkout_query`, а запросы начисляет только после `successful_payment`. Команда
-`/paysupport` выводит контакт из `PAYMENT_SUPPORT_CONTACT`.
+`/paysupport` выводит контакт администратора `@sa1nt_paul`.
 
 При первой инициализации тарифы из `STARS_PACKAGES` записываются в таблицу
 `star_packages`. Формат — `запросы:звёзды`, несколько тарифов разделяются запятыми.

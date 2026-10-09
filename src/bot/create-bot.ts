@@ -14,6 +14,9 @@ const TOO_LONG_TEXT = "Слишком длинно. Опиши суперспо�
 const ERROR_TEXT = "Не смог придумать дебафф. Попробуй ещё раз чуть позже.";
 const ADMIN_ONLY_TEXT = "Эта команда доступна только администратору.";
 const START_IMAGE_PATH = resolve(process.cwd(), "assets", "start.png");
+const PAY_IMAGE_PATH = resolve(process.cwd(), "assets", "pay.png");
+const BALANCE_IMAGE_PATH = resolve(process.cwd(), "assets", "balance.png");
+const PAY_SUPPORT_IMAGE_PATH = resolve(process.cwd(), "assets", "paysupport.png");
 
 export function createBot(config: AppConfig, db: Database): Bot {
   const bot = new Bot(config.telegramBotToken);
@@ -47,15 +50,13 @@ export function createBot(config: AppConfig, db: Database): Bot {
 
   bot.command("start", async (ctx) => {
     if (!ctx.from || ctx.from.is_bot) return;
-    const text = `Напиши мне суперспособность — я придумаю, как ее улучшить.
+    const text = `🦸 У тебя есть суперсила. Но есть один нюанс...
 
-Бесплатно: ${config.dailyFreeRequests} запросов в сутки.
-/balance — остаток запросов
-/buy — купить дополнительные запросы за ⭐️
-
+Придумай любую суперспособность, а я превращу её в полный кошмар 😈
 Например:
-Ты: Я умею летать
-Я: Но только вниз.`;
+🗣 Ты: Я умею летать
+💬 Я: Но только на пердячей тяге 💨
+Ну что, супергерой? На что ты способен?`;
     if (existsSync(START_IMAGE_PATH)) {
       try {
         await ctx.replyWithPhoto(new InputFile(START_IMAGE_PATH), { caption: text });
@@ -73,10 +74,21 @@ export function createBot(config: AppConfig, db: Database): Bot {
   bot.command("balance", async (ctx) => {
     if (!ctx.from || ctx.from.is_bot) return;
     const status = await db.quotaStatus(telegramUser(ctx.from), config.dailyFreeRequests);
-    await ctx.reply(
+    const text =
       `Бесплатных запросов сегодня: ${status.dailyRemaining} из ${config.dailyFreeRequests}\n` +
-        `Купленных запросов: ${status.paidCredits}`,
-    );
+      `Купленных запросов: ${status.paidCredits}`;
+    if (existsSync(BALANCE_IMAGE_PATH)) {
+      try {
+        await ctx.replyWithPhoto(new InputFile(BALANCE_IMAGE_PATH), { caption: text });
+        return;
+      } catch (error) {
+        logEvent("warn", "balance_image_failed", {
+          userId: ctx.from.id,
+          ...errorSummary(error),
+        });
+      }
+    }
+    await ctx.reply(text);
   });
 
   bot.command("buy", async (ctx) => {
@@ -94,16 +106,28 @@ export function createBot(config: AppConfig, db: Database): Bot {
     for (const item of packages) {
       keyboard.text(`${item.credits} запросов — ${item.stars} ⭐️`, `buy_package:${item.id}`).row();
     }
-    await ctx.reply(
-      [
-        "Выбери пакет запросов:",
-        "",
-        ...packages.map((item) => `${item.credits} запросов — ${item.stars} ⭐️`),
-        "",
-        "Купленные запросы не сгорают.",
-      ].join("\n"),
-      { reply_markup: keyboard },
-    );
+    const text = [
+      "Выбери пакет запросов:",
+      "",
+      ...packages.map((item) => `${item.credits} запросов — ${item.stars} ⭐️`),
+      "",
+      "Купленные запросы не сгорают.",
+    ].join("\n");
+    if (existsSync(PAY_IMAGE_PATH)) {
+      try {
+        await ctx.replyWithPhoto(new InputFile(PAY_IMAGE_PATH), {
+          caption: text,
+          reply_markup: keyboard,
+        });
+        return;
+      } catch (error) {
+        logEvent("warn", "pay_image_failed", {
+          userId: ctx.from.id,
+          ...errorSummary(error),
+        });
+      }
+    }
+    await ctx.reply(text, { reply_markup: keyboard });
   });
 
   bot.callbackQuery(/^buy_package:(\d+)$/u, async (ctx) => {
@@ -133,10 +157,20 @@ export function createBot(config: AppConfig, db: Database): Bot {
   });
 
   bot.command("paysupport", async (ctx) => {
-    await ctx.reply(
-      `Поддержка по оплате: ${config.paymentSupportContact}\n` +
-        "Приложи скрин оплаты и свой Telegram ID.",
-    );
+    if (!ctx.from || ctx.from.is_bot) return;
+    const text = "Если что-то не работает, напиши админу @sa1nt_paul и отправь скриншот проблемы.";
+    if (existsSync(PAY_SUPPORT_IMAGE_PATH)) {
+      try {
+        await ctx.replyWithPhoto(new InputFile(PAY_SUPPORT_IMAGE_PATH), { caption: text });
+        return;
+      } catch (error) {
+        logEvent("warn", "paysupport_image_failed", {
+          userId: ctx.from.id,
+          ...errorSummary(error),
+        });
+      }
+    }
+    await ctx.reply(text);
   });
 
   bot.on("pre_checkout_query", async (ctx) => {

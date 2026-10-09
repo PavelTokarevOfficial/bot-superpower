@@ -66,5 +66,4 @@ export const config = {
   maxUserMessageLength: 500,
   dailyFreeRequests: positiveInt("DAILY_FREE_REQUESTS", 5),
   initialStarPackages: starPackages(process.env.STARS_PACKAGES),
-  paymentSupportContact: process.env.PAYMENT_SUPPORT_CONTACT?.trim() || "Telegram ID: 832766702",
 } as const;
