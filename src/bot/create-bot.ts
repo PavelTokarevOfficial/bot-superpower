@@ -13,7 +13,7 @@ const EMPTY_TEXT = "Сначала придумай суперспособнос
 const TOO_LONG_TEXT = "Слишком длинно. Опиши суперспособность короче.";
 const ERROR_TEXT = "Не смог придумать дебафф. Попробуй ещё раз чуть позже.";
 const ADMIN_ONLY_TEXT = "Эта команда доступна только администратору.";
-const START_IMAGE_PATH = resolve(process.cwd(), "assets", "start.jpg");
+const START_IMAGE_PATH = resolve(process.cwd(), "assets", "start.png");
 
 export function createBot(config: AppConfig, db: Database): Bot {
   const bot = new Bot(config.telegramBotToken);
